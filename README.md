@@ -15,10 +15,10 @@ Download [Zadig](https://zadig.akeo.ie/), which is a Windows application that in
 4. Install driver
 ~~~
 <div align="center">
-<img src="image1.png">
+<img src="image1.png" width="600">
 </div>
 
-If the driver is successfully installed, you'll be able to find in Device Manager that the mouse has now become a libusb-win32 device
+If the driver is successfully installed, you'll be able to find in Device Manager that the mouse has now become a libusb-win32 device (and it's unable to control the cursor on your screen now).
 <div align="center">
 <img src="image2.png" width="600">
 </div>
