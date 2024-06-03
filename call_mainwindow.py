@@ -29,6 +29,8 @@ def set_button(enabled=[], disabled=[]):
 class Window(QMainWindow, Ui_MainWindow):
     def __init__(self, app):
         super(QMainWindow, self).__init__()
+        self.angle = math.radians(63.5)
+        self.angle_comp = math.radians(90-63.5)
         self.mut = QMutex()
         self.exp_start_time = None
         self.max_timestamps_plot: int = 1000
@@ -54,15 +56,15 @@ class Window(QMainWindow, Ui_MainWindow):
         self.calib_factor = None
         self.angle_offset = None
 
-        # self.set_mouse()
+        self.set_mouse()
         self.interval = 0.1 if self.frquency_line.text() == '' else 1 / float(self.frquency_line.text())
         self.update_data_thread = UpdateDataThread(self.mouse1, self.mouse2, self.interval)
         self.connect_signals()
-        self.setting_widgets = [self.mouse_type_combo, self.swap_button, self.calib_factor_line,
+        self.setting_widgets = [self.swap_button, self.calib_factor_line,
                                 self.angular_offset_line, self.ball_radius_line, self.frquency_line,
                                 self.plot_size_line]
         set_button(enabled=[self.test_start_button, self.record_start_button],
-                   disabled=[self.record_stop_button, self.test_stop_button])
+                   disabled=[self.record_stop_button, self.test_stop_button, self.mouse_type_combo])
 
     def setup_ui(self):
         self.setupUi(self)
@@ -92,10 +94,10 @@ class Window(QMainWindow, Ui_MainWindow):
 
     def set_mouse(self):
         Mouse.reset()
-        mouse_type = self.mouse_type_combo.currentText()
-        print(f'mouse set: {mouse_type}')
-        self.mouse1 = Mouse(mouse_type)
-        self.mouse2 = Mouse(mouse_type)
+        # mouse_type = self.mouse_type_combo.currentText()
+        # print(f'mouse set: {mouse_type}')
+        self.mouse1 = Mouse('Logitech G102 1')
+        self.mouse2 = Mouse('Logitech G102 2')
         detect_mouse1 = threading.Thread(target=self.mouse1.update, daemon=True)
         detect_mouse2 = threading.Thread(target=self.mouse2.update, daemon=True)
         detect_mouse1.start()
@@ -170,10 +172,12 @@ class Window(QMainWindow, Ui_MainWindow):
 
     def update_data_thread_slot(self, data):
         m1x, m1y, m2x, m2y, timestamp = data
-        wm = self.calib_factor * rot_mat(self.angle_offset) @ np.array([[m1y], [m2y]])
-        omega = self.calib_factor * (m1x + m2x) / (2 * self.r)
-        self.theta -= omega
-        pos_delta = - rot_mat(self.theta) @ wm
+        vm1x, vm1y, vm2x, vm2y = m1x, m1y, m2x, m2y  # sign ?
+        wx = self.calib_factor * vm1y
+        wy = -self.calib_factor * vm1x
+        wz = -self.calib_factor / self.r * (math.sin(self.angle_comp) * vm1y + vm2y) / math.cos(self.angle_comp)
+        self.theta -= wz
+        pos_delta = rot_mat(self.theta) @ np.array([[-wy], [wx]])
         x, y = self.x_pos + pos_delta[0].item(), self.y_pos + pos_delta[1].item()
         self.x_pos, self.y_pos = x, y
         self.x_data.append(x)
@@ -222,7 +226,6 @@ class UpdateDataThread(QThread):
             m1x, m1y = self.mouse1.X - mouse1x_before, self.mouse1.Y - mouse1y_before
             m2x, m2y = self.mouse2.X - mouse2x_before, self.mouse2.Y - mouse2y_before
             self._signal_update.emit((m1x, m1y, m2x, m2y, time.time()))
-
 
     @property
     def signal_update(self):

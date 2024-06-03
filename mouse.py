@@ -24,7 +24,8 @@ def decode_M500(raw_data):
 
 supported_mouses = {
     '': {},
-    'Logitech G102': {'vid': 0x046D, 'pid': 0xC092, 'ep': 0x81, 'buffer': 8, 'decode_function': decode_G102},
+    'Logitech G102 1': {'vid': 0x046D, 'pid': 0xC092, 'ep': 0x81, 'buffer': 8, 'decode_function': decode_G102},
+    'Logitech G102 2': {'vid': 0x046D, 'pid': 0xC09D, 'ep': 0x81, 'buffer': 8, 'decode_function': decode_G102},
     'Logitech M500': {'vid': 0x046D, 'pid': 0xC069, 'ep': 0x81, 'buffer': 6, 'decode_function': decode_M500},
 }
 
