@@ -54,17 +54,15 @@ class Window(QMainWindow, Ui_MainWindow):
         self.theta = None
         self.r = None
         self.calib_factor = None
-        self.angle_offset = None
 
-        self.set_mouse()
+        # self.set_mouse()
         self.interval = 0.1 if self.frquency_line.text() == '' else 1 / float(self.frquency_line.text())
         self.update_data_thread = UpdateDataThread(self.mouse1, self.mouse2, self.interval)
         self.connect_signals()
-        self.setting_widgets = [self.swap_button, self.calib_factor_line,
-                                self.angular_offset_line, self.ball_radius_line, self.frquency_line,
-                                self.plot_size_line]
+        self.setting_widgets = [self.swap_button, self.calib_factor_line, self.ball_radius_line, self.frquency_line,
+                                self.plot_size_line, self.mouse_type_combo, self.mouse_type_combo_2]
         set_button(enabled=[self.test_start_button, self.record_start_button],
-                   disabled=[self.record_stop_button, self.test_stop_button, self.mouse_type_combo])
+                   disabled=[self.record_stop_button, self.test_stop_button])
 
     def setup_ui(self):
         self.setupUi(self)
@@ -79,49 +77,54 @@ class Window(QMainWindow, Ui_MainWindow):
         self.x_upper = self.canvas_size
         self.x_lower = - self.canvas_size
         self.mouse_type_combo.addItems([key for key, _ in supported_mouses.items()])
+        self.mouse_type_combo_2.addItems([key for key, _ in supported_mouses.items()])
         self.trace_fig.add_line(self.x_data, self.y_data)
         self.trace_fig.axes.set_xlim(-self.canvas_size, self.canvas_size)
         self.trace_fig.axes.set_ylim(-self.canvas_size, self.canvas_size)
 
     def connect_signals(self):
         self.swap_button.clicked.connect(self.swap_mouse)
-        self.mouse_type_combo.currentIndexChanged.connect(self.set_mouse)
+        self.mouse_type_combo.currentIndexChanged.connect(self.set_mouse1)
+        self.mouse_type_combo_2.currentIndexChanged.connect(self.set_mouse2)
         self.test_start_button.clicked.connect(self.test_start)
         self.test_stop_button.clicked.connect(self.test_stop)
         self.record_start_button.clicked.connect(self.record_start)
         self.record_stop_button.clicked.connect(self.record_stop)
         self.update_data_thread.signal_update.connect(self.update_data_thread_slot)
 
-    def set_mouse(self):
+    def set_mouse1(self):
         Mouse.reset()
-        # mouse_type = self.mouse_type_combo.currentText()
-        # print(f'mouse set: {mouse_type}')
-        self.mouse1 = Mouse('Logitech G102 1')
-        self.mouse2 = Mouse('Logitech G102 2')
+        mouse_type1 = self.mouse_type_combo.currentText()
+        print(f'mouse1: {mouse_type1}')
+        self.mouse1 = Mouse(mouse_type1)
         detect_mouse1 = threading.Thread(target=self.mouse1.update, daemon=True)
-        detect_mouse2 = threading.Thread(target=self.mouse2.update, daemon=True)
         detect_mouse1.start()
+
+    def set_mouse2(self):
+        Mouse.reset()
+        mouse_type2 = self.mouse_type_combo_2.currentText()
+        print(f'mouse2: {mouse_type2}')
+        self.mouse2 = Mouse(mouse_type2)
+        detect_mouse2 = threading.Thread(target=self.mouse2.update, daemon=True)
         detect_mouse2.start()
-        self.update_data_thread = UpdateDataThread(self.mouse1, self.mouse2, self.interval)
-        self.update_data_thread.signal_update.connect(self.update_data_thread_slot)
 
     def swap_mouse(self):
         print('Mouse Swapped')
         self.mouse1, self.mouse2 = self.mouse2, self.mouse1
 
     def test_start(self):
+        self.update_data_thread = UpdateDataThread(self.mouse1, self.mouse2, 1 / float(self.frquency_line.text()))
+        self.update_data_thread.signal_update.connect(self.update_data_thread_slot)
         set_button(enabled=[self.test_stop_button],
                    disabled=[self.test_start_button, self.record_start_button, self.record_stop_button])
         set_button(disabled=self.setting_widgets)
 
         self.exp_start_time = time.time()
-        self.update_data_thread.interval = 1 / float(self.frquency_line.text())
         self.x_pos = 0.
         self.y_pos = 0.
         self.theta = 0.
         self.r = float(self.ball_radius_line.text())
         self.calib_factor = float(self.calib_factor_line.text())
-        self.angle_offset = math.radians(float(self.angular_offset_line.text()))
         print('start tracking')
         self.update_data_thread.start()
 
@@ -134,6 +137,8 @@ class Window(QMainWindow, Ui_MainWindow):
         self.redraw()
 
     def record_start(self):
+        self.update_data_thread = UpdateDataThread(self.mouse1, self.mouse2, 1 / float(self.frquency_line.text()))
+        self.update_data_thread.signal_update.connect(self.update_data_thread_slot)
         set_button(enabled=[self.record_stop_button],
                    disabled=[self.test_start_button, self.record_start_button, self.test_stop_button])
         set_button(disabled=self.setting_widgets)
@@ -144,7 +149,6 @@ class Window(QMainWindow, Ui_MainWindow):
         self.theta = 0.
         self.r = float(self.ball_radius_line.text())
         self.calib_factor = float(self.calib_factor_line.text())
-        self.angle_offset = math.radians(float(self.angular_offset_line.text()))
         print('start tracking')
         self.update_data_thread.start()
 
