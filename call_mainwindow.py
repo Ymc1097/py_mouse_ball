@@ -1,5 +1,6 @@
 import datetime
 import math
+import os
 import threading
 import time
 
@@ -93,7 +94,6 @@ class Window(QMainWindow, Ui_MainWindow):
         self.update_data_thread.signal_update.connect(self.update_data_thread_slot)
 
     def set_mouse1(self):
-        Mouse.reset()
         mouse_type1 = self.mouse_type_combo.currentText()
         print(f'mouse1: {mouse_type1}')
         self.mouse1 = Mouse(mouse_type1)
@@ -101,7 +101,6 @@ class Window(QMainWindow, Ui_MainWindow):
         detect_mouse1.start()
 
     def set_mouse2(self):
-        Mouse.reset()
         mouse_type2 = self.mouse_type_combo_2.currentText()
         print(f'mouse2: {mouse_type2}')
         self.mouse2 = Mouse(mouse_type2)
@@ -205,7 +204,8 @@ class Window(QMainWindow, Ui_MainWindow):
 
     def save_data(self):
         data = np.stack([np.array(self.x_data), np.array(self.y_data), np.array(self.timestamps)], axis=1)
-        fname = f'./runs/data_{datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")}.npy'
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        fname = os.path.join(dir_path, f'runs/data_{datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")}.npy')
         np.save(fname, data)
         print(f'data saved at {fname}')
 
