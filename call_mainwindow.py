@@ -43,6 +43,8 @@ class Window(QMainWindow, Ui_MainWindow):
         self.y_data = []
         self.x_data = []
         self.timestamps = []
+        self.feeding_timestamps = []
+        self.vs_timestamps = []
         self.fig_ntb = None
         self.gridlayout = None
         self.trace_fig = None
@@ -62,8 +64,8 @@ class Window(QMainWindow, Ui_MainWindow):
         self.connect_signals()
         self.setting_widgets = [self.swap_button, self.calib_factor_line, self.ball_radius_line, self.frquency_line,
                                 self.plot_size_line, self.mouse_type_combo, self.mouse_type_combo_2]
-        set_button(enabled=[self.test_start_button, self.record_start_button],
-                   disabled=[self.record_stop_button, self.test_stop_button])
+        set_button(enabled=[self.test_start_button, self.record_start_button, self.vs_on_button, self.feeding_on_button],
+                   disabled=[self.record_stop_button, self.test_stop_button, self.vs_off_button, self.feeding_off_button])
 
     def setup_ui(self):
         self.setupUi(self)
@@ -91,6 +93,10 @@ class Window(QMainWindow, Ui_MainWindow):
         self.test_stop_button.clicked.connect(self.test_stop)
         self.record_start_button.clicked.connect(self.record_start)
         self.record_stop_button.clicked.connect(self.record_stop)
+        self.feeding_on_button.clicked.connect(self.feeding_on)
+        self.feeding_off_button.clicked.connect(self.feeding_off)
+        self.vs_on_button.clicked.connect(self.vs_on)
+        self.vs_off_button.clicked.connect(self.vs_off)
         self.update_data_thread.signal_update.connect(self.update_data_thread_slot)
 
     def set_mouse1(self):
@@ -114,8 +120,8 @@ class Window(QMainWindow, Ui_MainWindow):
     def test_start(self):
         self.update_data_thread = UpdateDataThread(self.mouse1, self.mouse2, 1 / float(self.frquency_line.text()))
         self.update_data_thread.signal_update.connect(self.update_data_thread_slot)
-        set_button(enabled=[self.test_stop_button],
-                   disabled=[self.test_start_button, self.record_start_button, self.record_stop_button])
+        set_button(enabled=[self.test_stop_button, self.vs_on_button, self.feeding_on_button],
+                   disabled=[self.test_start_button, self.record_start_button, self.record_stop_button, self.vs_off_button, self.feeding_off_button])
         set_button(disabled=self.setting_widgets)
 
         self.exp_start_time = time.time()
@@ -129,8 +135,8 @@ class Window(QMainWindow, Ui_MainWindow):
 
     def test_stop(self):
         print('stop tracking')
-        set_button(enabled=[self.test_start_button, self.record_start_button],
-                   disabled=[self.record_stop_button, self.test_stop_button])
+        set_button(enabled=[self.test_start_button, self.record_start_button, self.vs_on_button, self.feeding_on_button],
+                   disabled=[self.record_stop_button, self.test_stop_button, self.vs_off_button, self.feeding_off_button])
         set_button(enabled=self.setting_widgets)
         self.update_data_thread.terminate()
         self.redraw()
@@ -160,10 +166,45 @@ class Window(QMainWindow, Ui_MainWindow):
         self.save_data()
         self.redraw()
 
+    def feeding_on(self):
+        print('Feeding on')
+        if self.exp_start_time is not None:
+            timestamp = time.time() - self.exp_start_time
+            self.feeding_timestamps.append(timestamp)
+            print('Time: %.2f s' % timestamp)
+        set_button(disabled=[self.feeding_on_button], enabled=[self.feeding_off_button])
+
+    def feeding_off(self):
+        print('Feeding off')
+        if self.exp_start_time is not None:
+            timestamp = time.time() - self.exp_start_time
+            self.feeding_timestamps.append(timestamp)
+            print('Time: %.2f s' % timestamp)
+        set_button(enabled=[self.feeding_on_button], disabled=[self.feeding_off_button])
+
+    def vs_on(self):
+        print('Visual stimuli on')
+        if self.exp_start_time is not None:
+            timestamp = time.time() - self.exp_start_time
+            self.vs_timestamps.append(timestamp)
+            print('Time: %.2f s' % timestamp)
+        set_button(disabled=[self.vs_on_button], enabled=[self.vs_off_button])
+
+    def vs_off(self):
+        print('Visual stimuli off')
+        if self.exp_start_time is not None:
+            timestamp = time.time() - self.exp_start_time
+            self.vs_timestamps.append(timestamp)
+            print('Time: %.2f s' % timestamp)
+        set_button(enabled=[self.vs_on_button], disabled=[self.vs_off_button])
+
     def redraw(self):
+        self.exp_start_time = None
         self.x_data.clear()
         self.y_data.clear()
         self.timestamps.clear()
+        self.feeding_timestamps.clear()
+        self.vs_timestamps.clear()
         self.trace_fig.line.set_xdata(self.x_data)
         self.trace_fig.line.set_ydata(self.y_data)
         self.trace_fig.axes.set_xlim(-self.canvas_size, self.canvas_size)
@@ -205,9 +246,22 @@ class Window(QMainWindow, Ui_MainWindow):
     def save_data(self):
         data = np.stack([np.array(self.x_data), np.array(self.y_data), np.array(self.timestamps)], axis=1)
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        fname = os.path.join(dir_path, f'runs/data_{datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")}.npy')
+        timenow = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        fname = os.path.join(dir_path, f'runs/data_trajectory_{timenow}.npy')
         np.save(fname, data)
         print(f'data saved at {fname}')
+
+        feeding_time = np.array(self.feeding_timestamps).reshape(-1, 1)
+        print(feeding_time)
+        fname = os.path.join(dir_path, f'runs/data_feeding_time_{timenow}.npy')
+        np.save(fname, feeding_time)
+        print(f'feeding timestamps saved at {fname}')
+
+        vs_time = np.array(self.vs_timestamps)
+        fname = os.path.join(dir_path, f'runs/data_visual_stimuli_time_{timenow}.npy')
+        np.save(fname, vs_time)
+        print(f'visual stimuli timestamps saved at {fname}')
+
 
 
 class UpdateDataThread(QThread):
