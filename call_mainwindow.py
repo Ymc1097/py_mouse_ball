@@ -1,3 +1,4 @@
+import csv
 import datetime
 import math
 import os
@@ -6,7 +7,9 @@ import time
 from queue import Queue
 
 import numpy as np
+from PyQt5 import QtGui
 from PyQt5.QtCore import QMutex, QTimer
+from PyQt5.QtGui import QTextCursor
 from PyQt5.QtWidgets import QMainWindow, QGridLayout, QApplication
 
 from mainwindow import Ui_MainWindow
@@ -54,6 +57,7 @@ class Window(QMainWindow, Ui_MainWindow):
         super(QMainWindow, self).__init__()
         # plot
         self.mut = QMutex()
+        self.mut2 = QMutex()
         self.max_timestamps_plot: int = 1000
         self.canvas_size = None
         self.y_upper = None
@@ -65,11 +69,23 @@ class Window(QMainWindow, Ui_MainWindow):
 
         # record
         self.exp_start_time = None
-        self.y_data = []
-        self.x_data = []
-        self.timestamps = []
-        self.feeding_timestamps = []
-        self.vs_timestamps = []
+        big_length = 500
+        self.traj_data = DataQueue(big_length)
+        self.feed_data = DataQueue(big_length)
+        self.vs_data = DataQueue(big_length)
+        self.traj_writer: csv.DictWriter = ...
+        self.feed_writer: csv.DictWriter = ...
+        self.vs_writer: csv.DictWriter = ...
+        self.f_vs = None
+        self.f_feed = None
+        self.f_traj = None
+        self.traj_file_path = None
+        self.feed_file_path = None
+        self.vs_file_path = None
+        self.feed_count = 0
+        self.vs_count = 0
+        self.update_count = 0
+
         self.mouse1: Mouse = ...
         self.mouse2: Mouse = ...
         self.mouse1x_before = 0
@@ -78,16 +94,20 @@ class Window(QMainWindow, Ui_MainWindow):
         self.mouse2y_before = 0
         self.x_pos = None
         self.y_pos = None
+        self.timestamp = None
         self.theta = None
         self.r = None
         self.calib_factor = None
         self.angle = math.radians(63.5)
         self.angle_comp = math.radians(90 - 63.5)
 
-        self.plot_timer: QTimer = ...
-        self.data_timer: QTimer = ...
+        self.plot_timer = QTimer()
+        self.plot_timer.setTimerType(0)
+        self.data_timer = QTimer()
+        self.data_timer.setTimerType(0)
+        self.save_timer = QTimer()
+        self.save_timer.setTimerType(0)
 
-        self.fig_ntb = None
         self.gridlayout = None
         self.trace_fig = None
         self.app = app
@@ -111,9 +131,11 @@ class Window(QMainWindow, Ui_MainWindow):
         self.x_upper = self.canvas_size
         self.x_lower = - self.canvas_size
         self.mouse_type_combo.addItems([key for key, _ in supported_mouses.items()])
-        self.trace_fig.add_line(self.x_data, self.y_data)
+        self.trace_fig.add_line([0], [0])
         self.trace_fig.axes.set_xlim(-self.canvas_size, self.canvas_size)
         self.trace_fig.axes.set_ylim(-self.canvas_size, self.canvas_size)
+        font = QtGui.QFont('Arial', 10)
+        self.logtext.setFont(font)
 
     def connect_signals(self):
         self.swap_button.clicked.connect(self.swap_mouse)
@@ -126,6 +148,9 @@ class Window(QMainWindow, Ui_MainWindow):
         self.feeding_off_button.clicked.connect(self.feeding_off)
         self.vs_on_button.clicked.connect(self.vs_on)
         self.vs_off_button.clicked.connect(self.vs_off)
+        self.data_timer.timeout.connect(self.update_data)
+        self.plot_timer.timeout.connect(self.plot_data)
+        self.save_timer.timeout.connect(self.save_data)
 
     def set_mouse(self):
         mouse_type = self.mouse_type_combo.currentText()
@@ -155,17 +180,10 @@ class Window(QMainWindow, Ui_MainWindow):
         self.calib_factor = float(self.calib_factor_line.text())
 
         print('start tracking')
-        self.data_timer = QTimer()
-        self.data_timer.setTimerType(0)
-        interval = 1 / float(self.frquency_line.text()) * 1e3  # ms
-        self.data_timer.timeout.connect(self.update_data)
         self.mouse1.clear()
         self.mouse2.clear()
+        interval = 1 / float(self.frquency_line.text()) * 1e3  # ms
         self.data_timer.start(int(interval))
-
-        self.plot_timer = QTimer()
-        self.plot_timer.setTimerType(0)
-        self.plot_timer.timeout.connect(self.plot_data)
         self.plot_timer.start(40)
 
     def test_stop(self):
@@ -177,6 +195,7 @@ class Window(QMainWindow, Ui_MainWindow):
         print('stop tracking')
         self.plot_timer.stop()
         self.data_timer.stop()
+        print(self.update_count)
         self.redraw()
 
     def record_start(self):
@@ -192,19 +211,14 @@ class Window(QMainWindow, Ui_MainWindow):
         self.r = float(self.ball_radius_line.text())
         self.calib_factor = float(self.calib_factor_line.text())
 
+        self.create_files()
         print('start tracking')
-        self.data_timer = QTimer()
-        self.data_timer.setTimerType(0)
-        interval = 1 / float(self.frquency_line.text()) * 1e3  # ms
-        self.data_timer.timeout.connect(self.update_data)
         self.mouse1.clear()
         self.mouse2.clear()
+        interval = 1 / float(self.frquency_line.text()) * 1e3  # ms
         self.data_timer.start(int(interval))
-
-        self.plot_timer = QTimer()
-        self.plot_timer.setTimerType(0)
-        self.plot_timer.timeout.connect(self.plot_data)
         self.plot_timer.start(40)
+        self.save_timer.start(1000)
 
     def record_stop(self):
         set_button(
@@ -215,39 +229,42 @@ class Window(QMainWindow, Ui_MainWindow):
         print('stop tracking')
         self.plot_timer.stop()
         self.data_timer.stop()
+        self.save_timer.stop()
         self.save_data()
+        self.f_feed.close()
+        self.f_traj.close()
+        self.f_vs.close()
+        print(self.update_count)
         self.redraw()
 
     def feeding_on(self):
-        print('Feeding on')
+        self.feed_count += 1
         if self.exp_start_time is not None:
             timestamp = time.time() - self.exp_start_time
-            self.feeding_timestamps.append(timestamp)
-            print('Time: %.2f s' % timestamp)
+            self.feed_data.write_item({'Timestamp': timestamp, 'On/Off': 'On', 'Count': self.feed_count})
+            self.logtext.append('[Feeding #%d] Feeding on at time: %.2f s\n' % (self.feed_count, timestamp))
         set_button(disabled=[self.feeding_on_button], enabled=[self.feeding_off_button])
 
     def feeding_off(self):
-        print('Feeding off')
         if self.exp_start_time is not None:
             timestamp = time.time() - self.exp_start_time
-            self.feeding_timestamps.append(timestamp)
-            print('Time: %.2f s' % timestamp)
+            self.feed_data.write_item({'Timestamp': timestamp, 'On/Off': 'Off', 'Count': self.feed_count})
+            self.logtext.append('[Feeding #%d] Feeding off at time: %.2f s\n' % (self.feed_count, timestamp))
         set_button(enabled=[self.feeding_on_button], disabled=[self.feeding_off_button])
 
     def vs_on(self):
-        print('Visual stimuli on')
+        self.vs_count += 1
         if self.exp_start_time is not None:
             timestamp = time.time() - self.exp_start_time
-            self.vs_timestamps.append(timestamp)
-            print('Time: %.2f s' % timestamp)
+            self.vs_data.write_item({'Timestamp': timestamp, 'On/Off': 'On', 'Count': self.vs_count})
+            self.logtext.append('[Visual Stimuli #%d] Visual Stimuli on at time: %.2f s\n' % (self.vs_count, timestamp))
         set_button(disabled=[self.vs_on_button], enabled=[self.vs_off_button])
 
     def vs_off(self):
-        print('Visual stimuli off')
         if self.exp_start_time is not None:
             timestamp = time.time() - self.exp_start_time
-            self.vs_timestamps.append(timestamp)
-            print('Time: %.2f s' % timestamp)
+            self.vs_data.write_item({'Timestamp': timestamp, 'On/Off': 'Off', 'Count': self.vs_count})
+            self.logtext.append('[Visual Stimuli #%d] Visual Stimuli off at time: %.2f s\n' % (self.vs_count, timestamp))
         set_button(enabled=[self.vs_on_button], disabled=[self.vs_off_button])
 
     def redraw(self):
@@ -256,24 +273,27 @@ class Window(QMainWindow, Ui_MainWindow):
         self.mouse2x_before = 0
         self.mouse2y_before = 0
         self.exp_start_time = None
-        self.x_data.clear()
-        self.y_data.clear()
+        self.traj_data.clear()
+        self.feed_data.clear()
+        self.vs_data.clear()
+        self.feed_count = 0
+        self.vs_count = 0
+        self.update_count = 0
         self.x_show.clear()
         self.y_show.clear()
-        self.timestamps.clear()
-        self.feeding_timestamps.clear()
-        self.vs_timestamps.clear()
-        self.trace_fig.line.set_xdata(self.x_data)
-        self.trace_fig.line.set_ydata(self.y_data)
+        self.trace_fig.line.set_xdata([0])
+        self.trace_fig.line.set_ydata([0])
         self.trace_fig.axes.set_xlim(-self.canvas_size, self.canvas_size)
         self.trace_fig.axes.set_ylim(-self.canvas_size, self.canvas_size)
         self.trace_fig.draw()
         self.x_display_label.setText('0')
         self.y_display_label.setText('0')
         self.time_display_label.setText('0')
+        self.logtext.clear()
 
     def update_data(self):
         timestamp = time.time() - self.exp_start_time
+        self.timestamp = timestamp
         m1x, m1y = self.mouse1.X - self.mouse1x_before, self.mouse1.Y - self.mouse1y_before
         m2x, m2y = self.mouse2.X - self.mouse2x_before, self.mouse2.Y - self.mouse2y_before
         self.mouse1x_before, self.mouse1y_before = self.mouse1.X, self.mouse1.Y
@@ -286,9 +306,8 @@ class Window(QMainWindow, Ui_MainWindow):
         pos_delta = rot_mat(self.theta) @ np.array([[-wy], [wx]])
         x, y = self.x_pos + pos_delta[0].item(), self.y_pos + pos_delta[1].item()
         self.x_pos, self.y_pos = x, y
-        self.x_data.append(x)
-        self.y_data.append(y)
-        self.timestamps.append(timestamp)
+        self.traj_data.write_item({'X': self.x_pos, 'Y': self.y_pos, 'Timestamp': self.timestamp})
+        self.update_count += 1
         self.x_show.write_item(x)
         self.y_show.write_item(y)
 
@@ -296,7 +315,7 @@ class Window(QMainWindow, Ui_MainWindow):
         if not self.x_show.is_empty():
             self.trace_fig.line.set_xdata(self.x_show.get_data())
             self.trace_fig.line.set_ydata(self.y_show.get_data())
-            x, y, timestamp = self.x_data[-1], self.y_data[-1], self.timestamps[-1]
+            x, y, timestamp = self.x_pos, self.y_pos, self.timestamp
             if x < self.x_lower or x > self.x_upper or y < self.y_lower or y > self.y_upper:
                 self.trace_fig.axes.set_xlim(x - self.canvas_size, x + self.canvas_size)
                 self.trace_fig.axes.set_ylim(y - self.canvas_size, y + self.canvas_size)
@@ -307,21 +326,46 @@ class Window(QMainWindow, Ui_MainWindow):
             self.time_display_label.setText('%.2f' % timestamp)
             self.trace_fig.draw()
 
+    def create_files(self):
+        root_path = os.path.dirname(os.path.realpath(__file__))
+        dir_path = os.path.join(root_path,
+                                f'runs/{datetime.datetime.fromtimestamp(self.exp_start_time).strftime("%Y_%m_%d_%H_%M_%S")}')
+        os.makedirs(dir_path)
+        self.traj_file_path = os.path.join(dir_path, 'trajectory.csv')
+        self.feed_file_path = os.path.join(dir_path, 'feeding.csv')
+        self.vs_file_path = os.path.join(dir_path, 'visual_stimuli.csv')
+
+        self.f_traj = open(self.traj_file_path, 'a+', encoding='utf-8')
+        header = ['X', 'Y', 'Timestamp']
+        self.traj_writer = csv.DictWriter(self.f_traj, fieldnames=header)
+        self.traj_writer.writeheader()
+
+        self.f_feed = open(self.feed_file_path, 'a+', encoding='utf-8')
+        header = ['Timestamp', 'On/Off', 'Count']
+        self.feed_writer = csv.DictWriter(self.f_feed, fieldnames=header)
+        self.feed_writer.writeheader()
+
+        self.f_vs = open(self.vs_file_path, 'a+', encoding='utf-8')
+        header = ['Timestamp', 'On/Off', 'Count']
+        self.vs_writer = csv.DictWriter(self.f_vs, fieldnames=header)
+        self.vs_writer.writeheader()
+
     def save_data(self):
-        data = np.stack([np.array(self.x_data), np.array(self.y_data), np.array(self.timestamps)], axis=1)
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        timenow = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        fname = os.path.join(dir_path, f'runs/data_trajectory_{timenow}.npy')
-        np.save(fname, data)
-        print(f'data saved at {fname}')
+        self.mut.lock()
 
-        feeding_time = np.array(self.feeding_timestamps).reshape(-1, 1)
-        # print(feeding_time)
-        fname = os.path.join(dir_path, f'runs/data_feeding_time_{timenow}.npy')
-        np.save(fname, feeding_time)
-        print(f'feeding timestamps saved at {fname}')
+        # save trajectory data
+        if not self.traj_data.is_empty():
+            self.traj_writer.writerows(self.traj_data.get_data())
+            self.traj_data.clear()
 
-        vs_time = np.array(self.vs_timestamps)
-        fname = os.path.join(dir_path, f'runs/data_visual_stimuli_time_{timenow}.npy')
-        np.save(fname, vs_time)
-        print(f'visual stimuli timestamps saved at {fname}')
+        # save feeding data
+        if not self.feed_data.is_empty():
+            self.feed_writer.writerows(self.feed_data.get_data())
+            self.feed_data.clear()
+
+        # save visual stimuli data
+        if not self.vs_data.is_empty():
+            self.vs_writer.writerows(self.vs_data.get_data())
+            self.vs_data.clear()
+
+        self.mut.unlock()

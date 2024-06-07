@@ -24,8 +24,8 @@ def decode_M500(raw_data):
 
 supported_mouses = {
     '': {},
-    'Logitech G102 2': {'vid': 0x046D, 'pid': 0xC09D, 'ep': 0x81, 'buffer': 8, 'decode_function': decode_G102},
-    'Logitech M500': {'vid': 0x046D, 'pid': 0xC069, 'ep': 0x81, 'buffer': 6, 'decode_function': decode_M500},
+    'Logitech G102': {'vid': 0x046D, 'pid': 0xC09D, 'decode_function': decode_G102},
+    'Logitech M500': {'vid': 0x046D, 'pid': 0xC069, 'decode_function': decode_M500},
 }
 
 
@@ -41,8 +41,6 @@ class Mouse:
             raise NotImplementedError('This kind of mouse is not supported')
         vid = supported_mouses[mouse_type]['vid']
         pid = supported_mouses[mouse_type]['pid']
-        self.ep = supported_mouses[mouse_type]['ep']
-        self.buffer = supported_mouses[mouse_type]['buffer']
         self.decode_function = supported_mouses[mouse_type]['decode_function']
 
         if Mouse.dev_iter is None:
@@ -51,6 +49,10 @@ class Mouse:
         else:
             self.dev = next(Mouse.dev_iter)
             self.dev = next(Mouse.dev_iter)
+
+        cfg = self.dev[0][(0, 0)][0]
+        self.ep = cfg.bEndpointAddress
+        self.buffer = cfg.wMaxPacketSize
 
         self.X = 0
         self.Y = 0
