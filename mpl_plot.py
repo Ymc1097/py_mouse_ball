@@ -8,7 +8,7 @@ from matplotlib.figure import Figure
 
 
 class Mplplot(FigureCanvas):
-    def __init__(self, parent=None, width=7, height=7):
+    def __init__(self, parent=None, width=3, height=3):
         self.line = None
         self.fig = Figure(figsize=(width, height))
         super(Mplplot, self).__init__(self.fig)
