@@ -827,7 +827,7 @@
               </font>
              </property>
              <property name="text">
-              <string>Start</string>
+              <string>Start (F1)</string>
              </property>
             </widget>
            </item>
@@ -862,7 +862,7 @@
               </font>
              </property>
              <property name="text">
-              <string>Stop</string>
+              <string>Stop (F2)</string>
              </property>
              <property name="iconSize">
               <size>
@@ -940,7 +940,7 @@
               </font>
              </property>
              <property name="text">
-              <string>Start</string>
+              <string>Start (F3)</string>
              </property>
             </widget>
            </item>
@@ -972,7 +972,7 @@
               </font>
              </property>
              <property name="text">
-              <string>Stop</string>
+              <string>Stop (F4)</string>
              </property>
             </widget>
            </item>
@@ -1056,7 +1056,7 @@
               </font>
              </property>
              <property name="text">
-              <string>On</string>
+              <string>On (F5)</string>
              </property>
             </widget>
            </item>
@@ -1091,7 +1091,7 @@
               </font>
              </property>
              <property name="text">
-              <string>Off</string>
+              <string>Off (F6)</string>
              </property>
              <property name="iconSize">
               <size>
@@ -1169,7 +1169,7 @@
               </font>
              </property>
              <property name="text">
-              <string>On</string>
+              <string>On (F7)</string>
              </property>
             </widget>
            </item>
@@ -1204,7 +1204,7 @@
               </font>
              </property>
              <property name="text">
-              <string>Off</string>
+              <string>Off (F8)</string>
              </property>
              <property name="iconSize">
               <size>
@@ -1244,7 +1244,7 @@
         </font>
        </property>
        <property name="title">
-        <string>log</string>
+        <string>Log</string>
        </property>
        <layout class="QHBoxLayout" name="horizontalLayout_6">
         <item>

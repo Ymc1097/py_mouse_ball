@@ -8,8 +8,8 @@ from queue import Queue
 
 import numpy as np
 from PyQt5 import QtGui
-from PyQt5.QtCore import QMutex, QTimer
-from PyQt5.QtGui import QTextCursor
+from PyQt5.QtCore import QMutex, QTimer, Qt
+from PyQt5.QtGui import QKeyEvent
 from PyQt5.QtWidgets import QMainWindow, QGridLayout, QApplication
 
 from mainwindow import Ui_MainWindow
@@ -86,6 +86,7 @@ class Window(QMainWindow, Ui_MainWindow):
         self.vs_count = 0
         self.update_count = 0
 
+        # mouse
         self.mouse1: Mouse = ...
         self.mouse2: Mouse = ...
         self.mouse1x_before = 0
@@ -101,12 +102,19 @@ class Window(QMainWindow, Ui_MainWindow):
         self.angle = math.radians(63.5)
         self.angle_comp = math.radians(90 - 63.5)
 
+        # thread
         self.plot_timer = QTimer()
         self.plot_timer.setTimerType(0)
         self.data_timer = QTimer()
         self.data_timer.setTimerType(0)
         self.save_timer = QTimer()
         self.save_timer.setTimerType(0)
+
+        #
+        self.is_on_test = False
+        self.is_on_record = False
+        self.is_on_feed = False
+        self.is_on_vs = False
 
         self.gridlayout = None
         self.trace_fig = None
@@ -136,6 +144,31 @@ class Window(QMainWindow, Ui_MainWindow):
         self.trace_fig.axes.set_ylim(-self.canvas_size, self.canvas_size)
         font = QtGui.QFont('Arial', 10)
         self.logtext.setFont(font)
+
+    def keyPressEvent(self, event: QKeyEvent):
+        if event.key() == Qt.Key_F1 and not self.is_on_test and not self.is_on_record:
+            self.test_start()
+
+        if event.key() == Qt.Key_F2 and self.is_on_test and not self.is_on_record:
+            self.test_stop()
+
+        if event.key() == Qt.Key_F3 and not self.is_on_record and not self.is_on_test:
+            self.record_start()
+
+        if event.key() == Qt.Key_F4 and self.is_on_record and not self.is_on_test:
+            self.record_stop()
+
+        if event.key() == Qt.Key_F5 and not self.is_on_feed:
+            self.feeding_on()
+
+        if event.key() == Qt.Key_F6 and self.is_on_feed:
+            self.feeding_off()
+
+        if event.key() == Qt.Key_F7 and not self.is_on_vs:
+            self.vs_on()
+
+        if event.key() == Qt.Key_F8 and self.is_on_vs:
+            self.vs_off()
 
     def connect_signals(self):
         self.swap_button.clicked.connect(self.swap_mouse)
@@ -167,6 +200,9 @@ class Window(QMainWindow, Ui_MainWindow):
         self.mouse1, self.mouse2 = self.mouse2, self.mouse1
 
     def test_start(self):
+        self.is_on_vs = False
+        self.is_on_feed = False
+        self.is_on_test = True
         set_button(enabled=[self.test_stop_button, self.vs_on_button, self.feeding_on_button],
                    disabled=[self.test_start_button, self.record_start_button, self.record_stop_button,
                              self.vs_off_button, self.feeding_off_button])
@@ -187,6 +223,7 @@ class Window(QMainWindow, Ui_MainWindow):
         self.plot_timer.start(40)
 
     def test_stop(self):
+        self.is_on_test = False
         set_button(
             enabled=[self.test_start_button, self.record_start_button, self.vs_on_button, self.feeding_on_button],
             disabled=[self.record_stop_button, self.test_stop_button, self.vs_off_button, self.feeding_off_button])
@@ -195,10 +232,13 @@ class Window(QMainWindow, Ui_MainWindow):
         print('stop tracking')
         self.plot_timer.stop()
         self.data_timer.stop()
-        print(self.update_count)
+        print(f'{self.update_count} updates')
         self.redraw()
 
     def record_start(self):
+        self.is_on_vs = False
+        self.is_on_feed = False
+        self.is_on_record = True
         set_button(enabled=[self.record_stop_button, self.vs_on_button, self.feeding_on_button],
                    disabled=[self.record_start_button, self.test_start_button, self.test_stop_button,
                              self.vs_off_button, self.feeding_off_button])
@@ -221,6 +261,7 @@ class Window(QMainWindow, Ui_MainWindow):
         self.save_timer.start(1000)
 
     def record_stop(self):
+        self.is_on_record = False
         set_button(
             enabled=[self.test_start_button, self.record_start_button, self.vs_on_button, self.feeding_on_button],
             disabled=[self.record_stop_button, self.test_stop_button, self.vs_off_button, self.feeding_off_button])
@@ -234,10 +275,11 @@ class Window(QMainWindow, Ui_MainWindow):
         self.f_feed.close()
         self.f_traj.close()
         self.f_vs.close()
-        print(self.update_count)
+        print(f'{self.update_count} updates')
         self.redraw()
 
     def feeding_on(self):
+        self.is_on_feed = True
         self.feed_count += 1
         if self.exp_start_time is not None:
             timestamp = time.time() - self.exp_start_time
@@ -246,6 +288,7 @@ class Window(QMainWindow, Ui_MainWindow):
         set_button(disabled=[self.feeding_on_button], enabled=[self.feeding_off_button])
 
     def feeding_off(self):
+        self.is_on_feed = False
         if self.exp_start_time is not None:
             timestamp = time.time() - self.exp_start_time
             self.feed_data.write_item({'Timestamp': timestamp, 'On/Off': 'Off', 'Count': self.feed_count})
@@ -253,6 +296,7 @@ class Window(QMainWindow, Ui_MainWindow):
         set_button(enabled=[self.feeding_on_button], disabled=[self.feeding_off_button])
 
     def vs_on(self):
+        self.is_on_vs = True
         self.vs_count += 1
         if self.exp_start_time is not None:
             timestamp = time.time() - self.exp_start_time
@@ -261,6 +305,7 @@ class Window(QMainWindow, Ui_MainWindow):
         set_button(disabled=[self.vs_on_button], enabled=[self.vs_off_button])
 
     def vs_off(self):
+        self.is_on_vs = False
         if self.exp_start_time is not None:
             timestamp = time.time() - self.exp_start_time
             self.vs_data.write_item({'Timestamp': timestamp, 'On/Off': 'Off', 'Count': self.vs_count})
@@ -279,6 +324,8 @@ class Window(QMainWindow, Ui_MainWindow):
         self.feed_count = 0
         self.vs_count = 0
         self.update_count = 0
+        self.is_on_vs = False
+        self.is_on_feed = False
         self.x_show.clear()
         self.y_show.clear()
         self.trace_fig.line.set_xdata([0])
