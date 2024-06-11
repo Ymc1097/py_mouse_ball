@@ -345,7 +345,7 @@ class Window(QMainWindow, Ui_MainWindow):
         m2x, m2y = self.mouse2.X - self.mouse2x_before, self.mouse2.Y - self.mouse2y_before
         self.mouse1x_before, self.mouse1y_before = self.mouse1.X, self.mouse1.Y
         self.mouse2x_before, self.mouse2y_before = self.mouse2.X, self.mouse2.Y
-        vm1x, vm1y, _, vm2y = m1x, m1y, m2x, m2y  # sign ?
+        vm1x, vm1y, _, vm2y = m1x, m1y, m2x, -m2y  # sign ?
         wx = self.calib_factor * vm1y
         wy = -self.calib_factor * vm1x
         wz = -self.calib_factor / self.r * (math.sin(self.angle_comp) * vm1y + vm2y) / math.cos(self.angle_comp)
@@ -382,17 +382,17 @@ class Window(QMainWindow, Ui_MainWindow):
         self.feed_file_path = os.path.join(dir_path, 'feeding.csv')
         self.vs_file_path = os.path.join(dir_path, 'visual_stimuli.csv')
 
-        self.f_traj = open(self.traj_file_path, 'a+', encoding='utf-8')
+        self.f_traj = open(self.traj_file_path, 'a+', encoding='utf-8', newline='')
         header = ['X', 'Y', 'Timestamp']
         self.traj_writer = csv.DictWriter(self.f_traj, fieldnames=header)
         self.traj_writer.writeheader()
 
-        self.f_feed = open(self.feed_file_path, 'a+', encoding='utf-8')
+        self.f_feed = open(self.feed_file_path, 'a+', encoding='utf-8', newline='')
         header = ['Timestamp', 'On/Off', 'Count']
         self.feed_writer = csv.DictWriter(self.f_feed, fieldnames=header)
         self.feed_writer.writeheader()
 
-        self.f_vs = open(self.vs_file_path, 'a+', encoding='utf-8')
+        self.f_vs = open(self.vs_file_path, 'a+', encoding='utf-8', newline='')
         header = ['Timestamp', 'On/Off', 'Count']
         self.vs_writer = csv.DictWriter(self.f_vs, fieldnames=header)
         self.vs_writer.writeheader()
