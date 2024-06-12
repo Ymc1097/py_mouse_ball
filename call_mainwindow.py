@@ -142,7 +142,7 @@ class Window(QMainWindow, Ui_MainWindow):
         self.trace_fig.add_line([0], [0])
         self.trace_fig.axes.set_xlim(-self.canvas_size, self.canvas_size)
         self.trace_fig.axes.set_ylim(-self.canvas_size, self.canvas_size)
-        font = QtGui.QFont('Arial', 10)
+        font = QtGui.QFont('Arial', 9)
         self.logtext.setFont(font)
 
     def keyPressEvent(self, event: QKeyEvent):
@@ -203,6 +203,8 @@ class Window(QMainWindow, Ui_MainWindow):
         self.is_on_vs = False
         self.is_on_feed = False
         self.is_on_test = True
+        self.feed_count = 0
+        self.vs_count = 0
         set_button(enabled=[self.test_stop_button, self.vs_on_button, self.feeding_on_button],
                    disabled=[self.test_start_button, self.record_start_button, self.record_stop_button,
                              self.vs_off_button, self.feeding_off_button])
@@ -239,6 +241,8 @@ class Window(QMainWindow, Ui_MainWindow):
         self.is_on_vs = False
         self.is_on_feed = False
         self.is_on_record = True
+        self.feed_count = 0
+        self.vs_count = 0
         set_button(enabled=[self.record_stop_button, self.vs_on_button, self.feeding_on_button],
                    disabled=[self.record_start_button, self.test_start_button, self.test_stop_button,
                              self.vs_off_button, self.feeding_off_button])
@@ -284,7 +288,7 @@ class Window(QMainWindow, Ui_MainWindow):
         if self.exp_start_time is not None:
             timestamp = time.time() - self.exp_start_time
             self.feed_data.write_item({'Timestamp': timestamp, 'On/Off': 'On', 'Count': self.feed_count})
-            self.logtext.append('[Feeding #%d] Feeding on at time: %.2f s\n' % (self.feed_count, timestamp))
+            self.logtext.append('[Feeding #%d]  Feeding on at time: %.2f s\n' % (self.feed_count, timestamp))
         set_button(disabled=[self.feeding_on_button], enabled=[self.feeding_off_button])
 
     def feeding_off(self):
@@ -292,7 +296,7 @@ class Window(QMainWindow, Ui_MainWindow):
         if self.exp_start_time is not None:
             timestamp = time.time() - self.exp_start_time
             self.feed_data.write_item({'Timestamp': timestamp, 'On/Off': 'Off', 'Count': self.feed_count})
-            self.logtext.append('[Feeding #%d] Feeding off at time: %.2f s\n' % (self.feed_count, timestamp))
+            self.logtext.append('[Feeding #%d]  Feeding off at time: %.2f s\n' % (self.feed_count, timestamp))
         set_button(enabled=[self.feeding_on_button], disabled=[self.feeding_off_button])
 
     def vs_on(self):
@@ -301,7 +305,7 @@ class Window(QMainWindow, Ui_MainWindow):
         if self.exp_start_time is not None:
             timestamp = time.time() - self.exp_start_time
             self.vs_data.write_item({'Timestamp': timestamp, 'On/Off': 'On', 'Count': self.vs_count})
-            self.logtext.append('[Visual Stimuli #%d] Visual Stimuli on at time: %.2f s\n' % (self.vs_count, timestamp))
+            self.logtext.append('[Visual Stimuli #%d]  Visual Stimuli on at time: %.2f s\n' % (self.vs_count, timestamp))
         set_button(disabled=[self.vs_on_button], enabled=[self.vs_off_button])
 
     def vs_off(self):
@@ -309,7 +313,7 @@ class Window(QMainWindow, Ui_MainWindow):
         if self.exp_start_time is not None:
             timestamp = time.time() - self.exp_start_time
             self.vs_data.write_item({'Timestamp': timestamp, 'On/Off': 'Off', 'Count': self.vs_count})
-            self.logtext.append('[Visual Stimuli #%d] Visual Stimuli off at time: %.2f s\n' % (self.vs_count, timestamp))
+            self.logtext.append('[Visual Stimuli #%d]  Visual Stimuli off at time: %.2f s\n' % (self.vs_count, timestamp))
         set_button(enabled=[self.vs_on_button], disabled=[self.vs_off_button])
 
     def redraw(self):

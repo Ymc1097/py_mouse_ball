@@ -15,7 +15,7 @@ class Mplplot(FigureCanvas):
         self.setParent(parent)
         self.axes = self.fig.add_subplot(111)
         self.axes.grid(True)
-        self.axes.set_xlabel('Side Step', size=12)
+        self.axes.set_xlabel('Side Stepping', size=12)
         self.axes.set_ylabel('Forward Walking', size=12)
 
         FigureCanvas.setSizePolicy(self, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)

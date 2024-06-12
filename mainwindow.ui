@@ -10,6 +10,24 @@
     <height>896</height>
    </rect>
   </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>1747</width>
+    <height>896</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>1747</width>
+    <height>896</height>
+   </size>
+  </property>
   <property name="font">
    <font>
     <family>Microsoft Himalaya</family>
@@ -1003,7 +1021,7 @@
       <x>1310</x>
       <y>30</y>
       <width>368</width>
-      <height>631</height>
+      <height>781</height>
      </rect>
     </property>
     <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -1258,7 +1276,7 @@
           <property name="minimumSize">
            <size>
             <width>0</width>
-            <height>300</height>
+            <height>440</height>
            </size>
           </property>
          </widget>
