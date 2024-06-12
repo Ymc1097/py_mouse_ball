@@ -50,7 +50,7 @@ Mouse 1.
 </br>
 
 Calcualtion of the fictive path: \
-The sensing point of Mouse 1 on the ball has a position vector ${\boldsymbol{p}}_{m1}$. When the ball rotates with angular velocity vector $\omega$, the circumferential speed ${\boldsymbol{\upsilon}}_{m1}$ of the ball at that point is:
+The sensing point of Mouse 1 on the ball has a position vector $${\boldsymbol{p}}_{m1}$$. When the ball rotates with angular velocity vector $\omega$, the circumferential speed ${\boldsymbol{\upsilon}}_{m1}$ of the ball at that point is:
 
 $$
 {\boldsymbol{\upsilon}}_{m1} = \boldsymbol{\omega} \times {\boldsymbol{p}}_{m1}.
@@ -107,6 +107,6 @@ $$
 and finally, the fictive position $P$ of the fruit fly in the current frame $k$ is:
 
 $$
-P^k = \begin{pmatrix}P^k_{forward} \\[5pt] P^k_{side} \\\end{pmatrix} = \begin{pmatrix}P^{k-1}_{forward} \\[5pt] P^{k-1}_{side} \\\end{pmatrix} + \begin{pmatrix} cos\theta^k & -sin\theta^k \\[5pt] sin\theta^k & cos\theta^k \end{pmatrix} \begin{pmatrix}w_{forward} \\[5pt]w_{side} \\\end{pmatrix}.
+P^k = \begin{pmatrix}P^k_{forward} \\[5pt] P^k_{side} \\\end{pmatrix} = \begin{pmatrix}P^{k-1}_{forward} \\[5pt] P^{k-1}_{side} \\\end{pmatrix} + \begin{pmatrix} cos\theta^k & -sin\theta^k \\[5pt] sin\theta^k & cos\theta^k \end{pmatrix} \begin{pmatrix}w_{forward} \\[5pt]w_{side} \end{pmatrix}.
 \tag{8}
 $$
