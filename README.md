@@ -36,6 +36,10 @@ python test.py
 ```
 
 ## 4.Method
+GUI: 
+<div align="center">
+<img src="image5.PNG" height="400">
+</div>  
 
 Mouse Setting: \
 Two "Logitech G102 LIGHTSYNC Gaming Mouse" are used to detect the ball rotation. One is fixed at the bottom of the ball, with its
@@ -50,11 +54,11 @@ Mouse 1.
 </br>
 
 Calcualtion of the fictive path: \
-The sensing point of Mouse 1 on the ball has a position vector ${\boldsymbol{p}}_{m1}$. When the ball rotates with angular velocity vector $\omega$, the circumferential speed ${\boldsymbol{\upsilon}}_{m1}$ of the ball at that point is:
+The sensing point of Mouse 1 on the ball has a position vector ${\boldsymbol{p}}_{m1}$. When the ball rotates with angular velocity vector $\boldsymbol{\omega}$, the circumferential speed ${\boldsymbol{\upsilon}}_{m1}$ of the ball at that point is:
 
 $$
-    {\boldsymbol{\upsilon}}_{m1} = \boldsymbol{\omega} \times {\boldsymbol{p}}_{m1}.
-    \tag{1}
+{\boldsymbol{\upsilon}}_{m1} = \boldsymbol{\omega} \times {\boldsymbol{p}}_{m1}.
+\tag{1}
 $$
 
 Let ${\boldsymbol{s}}_{m1x}$ be the unit vector along the X sensing axis of Mouse 1, then the component of ${\boldsymbol{\upsilon}}_{m1}$ along ${\boldsymbol{s}}_{m1x}$ can be obtained by:
