@@ -38,7 +38,7 @@ python test.py
 ## 4.Method
 GUI: 
 <div align="center">
-<img src="image5.PNG" height="400">
+<img src="image5.png" height="400">
 </div>  
 
 Mouse Setting: \
